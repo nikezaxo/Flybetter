@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Bird Game</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+
+        #gameArea {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: url('back.gif') no-repeat;
+            background-size: cover;
+        }
+
+        .fire {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+        }
+
+        #character {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            bottom: 10px;
+            left: 50px;
+        }
+
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 24px;
+        }
+
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 36px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameArea">
+        <img src="blue fire.gif" class="fire blue-fire">
+        <img src="red fire.webp" class="fire red-fire">
+        <img src="bird.gif" id="character">
+        <div id="score">Score: 0</div>
+        <div id="gameOver">Game Over! Final Score: <span id="finalScore"></span></div>
+    </div>
+    <script>
+        let score = 0;
+        let gravity = 0.6;
+        let jumpStrength = -6; // Adjusted jump strength
+        let maxJumpStrength = -12; // Adjusted max jump strength
+        let character = document.getElementById('character');
+        let characterY = window.innerHeight - 60;
+        let velocity = 0;
+        let isOnGround = true;
+        let tapStartTime = 0;
+        let isTapping = false;
+        let gameStarted = false;
+        let gameDuration = 60000; // 1 minute in milliseconds
+        let gameTimer;
+
+        function createFire(src, count, isBlueFire) {
+            for (let i = 0; i < count; i++) {
+                let fire = document.createElement('img');
+                fire.src = src;
+                fire.className = 'fire';
+                fire.style.top = Math.random() * (window.innerHeight - 50) + 'px';
+                fire.style.left = Math.random() * (window.innerWidth - 50) + 'px';
+                document.getElementById('gameArea').appendChild(fire);
+
+                moveFire(fire, isBlueFire);
+            }
+        }
+
+        function moveFire(fire, isBlueFire) {
+            let speed = isBlueFire ? 5 : 3;
+            let position = window.innerWidth - 50;
+
+            function frame() {
+                if (position <= -50) {
+                    position = window.innerWidth - 50;
+                    fire.style.top = Math.random() * (window.innerHeight - 50) + 'px';
+                } else {
+                    position -= speed;
+                    fire.style.left = position + 'px';
+                }
+
+                const charRect = character.getBoundingClientRect();
+                const fireRect = fire.getBoundingClientRect();
+
+                if (
+                    fireRect.left < charRect.right &&
+                    fireRect.right > charRect.left &&
+                    fireRect.top < charRect.bottom &&
+                    fireRect.bottom > charRect.top
+                ) {
+                    if (isBlueFire) {
+                        score += 10;
+                    } else {
+                        score -= 10;
+                    }
+                    document.getElementById('score').innerText = `Score: ${score}`;
+                    fire.style.left = window.innerWidth - 50 + 'px'; // Reset position
+                }
+
+                requestAnimationFrame(frame);
+            }
+
+            frame();
+        }
+
+        function startTap() {
+            if (!gameStarted) {
+                startGame();
+            }
+            tapStartTime = Date.now();
+            isTapping = true;
+        }
+
+        function endTap() {
+            if (isTapping) {
+                let tapDuration = Date.now() - tapStartTime;
+                let fallStrength = Math.min(jumpStrength - (tapDuration / 100), maxJumpStrength);
+                velocity = fallStrength;
+                isTapping = false;
+            }
+        }
+
+        function update() {
+            if (!gameStarted) return;
+
+            velocity += gravity;
+            characterY += velocity;
+
+            if (characterY > window.innerHeight - 60) {
+                characterY = window.innerHeight - 60;
+                velocity = 0;
+                isOnGround = true;
+            }
+
+            if (characterY < 0) {
+                characterY = 0;
+                velocity = 0;
+            }
+
+            character.style.bottom = characterY + 'px';
+            requestAnimationFrame(update);
+        }
+
+        function moveBackground() {
+            let bgPosition = 0;
+            function updateBackground() {
+                bgPosition -= 0.5;
+                if (bgPosition <= -window.innerWidth) {
+                    bgPosition = 0;
+                }
+                document.getElementById('gameArea').style.backgroundPosition = bgPosition + 'px 0';
+                requestAnimationFrame(updateBackground);
+            }
+            updateBackground();
+        }
+
+        function startGame() {
+            gameStarted = true;
+            document.getElementById('gameOver').style.display = 'none';
+            gameTimer = setTimeout(endGame, gameDuration);
+            update();
+            moveBackground();
+        }
+
+        function endGame() {
+            gameStarted = false;
+            document.getElementById('gameOver').style.display = 'block';
+            document.getElementById('finalScore').innerText = score;
+            // Optionally, you can add code here to save the score or perform other actions
+        }
+
+        createFire('blue fire.gif', 5, true); // 5 blue fires
+        createFire('red fire.webp', 5, false); // 5 red fires
+
+        document.body.addEventListener('mousedown', startTap);
+        document.body.addEventListener('mouseup', endTap);
+        document.body.addEventListener('touchstart', startTap);
+        document.body.addEventListener('touchend', endTap);
+    </script>
+</body>
+</html>
